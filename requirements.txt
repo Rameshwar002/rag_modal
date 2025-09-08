@@ -1,0 +1,5 @@
+chromadb
+sentence-transformers
+tiktoken
+pandas
+pypdf2

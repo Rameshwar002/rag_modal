@@ -1,0 +1,17 @@
+id,document,metadata
+TestDB.pdf_chunk0,"Python is a high -level, interpreted programming language used for web development, data 
+science, and automation.   
+It supports multiple paradigms like procedural, object -oriented, and functional 
+programming.   
+Lists in Python are mutable, while tuples are immutable.   
+Dictionaries in Python store data as key -value pairs.   
+Functions in Python are defined using the def keyword.   
+Classes and objects enable object -oriented programming in Python.   
+Decorators allow modification of function behavior without changing the function code.   
+Generators yield values one at a time using the yield keyword.   
+","{'source': 'UpdatedWithFilesRead\\TestDB.pdf', 'tokens': 118}"
+TestDB.pdf_p1_c0,"Python is a high -level, interpreted programming language used for web development, data science, and automation. It supports multiple paradigms like procedural, object -oriented, and functional programming. Lists in Python are mutable, while tuples are immutable. Dictionaries in Python store data as key -value pairs. Functions in Python are defined using the def keyword. Classes and objects enable object -oriented programming in Python. Decorators allow modification of function behavior without changing the function code. Generators yield values one at a","{'page': 1, 'source': 'UpdatedWithFilesRead/TestDB.pdf', 'tokens': 80}"
+TestDB.pdf_p1_c1,time using the yield keyword.,"{'tokens': 5, 'page': 1, 'source': 'UpdatedWithFilesRead/TestDB.pdf'}"
+TestData.pdf_p1_c0,"Python is a high -level, interpreted programming language. It was created by Guido van Rossum in 1991. Python is known for its simplicity and readability.","{'tokens': 25, 'page': 1, 'source': 'UpdatedWithFilesRead/TestData.pdf'}"
+TestData.pdf_p2_c0,"Python supports multiple paradigms: - Procedural programming - Object -oriented programming - Functional programming Lists in Python are mutable, while tuples are immutable. Dictionaries in Python store data as key -value pairs.","{'source': 'UpdatedWithFilesRead/TestData.pdf', 'tokens': 32, 'page': 2}"
+TestData.pdf_p3_c0,Functions in Python are defined using the def keyword. Classes and objects enable object -oriented programming in Python. Decorators allow modification of function behavior without changing the function code. Generators yield values one at a time using the yield keyword.,"{'source': 'UpdatedWithFilesRead/TestData.pdf', 'tokens': 40, 'page': 3}"
