@@ -1,0 +1,166 @@
+@startuml
+autonumber "<b>[000]"
+
+box "Hostel Backend Services"
+actor "User" as user
+participant "User Service" as us
+participant "Inventory Service" as invs
+participant "Staff Service" as ss
+participant "InOut Service" as ios
+participant "Damage Service" as ds
+participant "Room Allocation Service" as rs
+participant "Notification Service" as ns
+participant "Listener Queue" as lq
+participant "Listener Service" as ls
+database "Hostel Central DB" as db
+end box
+
+note right of lq
+<b>Message Broker:</b>
+• Acts as async queue
+• Example: Kafka, RabbitMQ
+• Used for event-driven communication
+end note
+
+==User Login==
+
+user -> us: POST /auth/login {username, password}
+us -> db: Validate credentials
+alt if credentials valid
+us -> user: 200 OK with JWT Token
+else invalid credentials
+us -> user: 401 Unauthorized
+end
+
+==Inventory Fetch==
+
+user -> invs: GET /inventory/list (JWT)
+invs -> us: Validate JWT Token
+alt if token valid
+us -> invs: 200 OK
+invs -> db: Fetch all inventory items [utensils, furniture, electrical items]
+invs -> user: Return list of inventory
+else token invalid
+us -> user: 403 Forbidden
+end
+
+==Add Staff Details==
+
+user -> ss: POST /staff/add {name, role, contact} (JWT)
+ss -> us: Validate JWT Token
+alt if token valid
+us -> ss: 200 OK
+ss -> db: Insert Staff Details into Staff Table
+note over ss,db: <b>Roles include:\n• Warden\n• Cleaner\n• Watchman
+ss -> user: 201 Created
+else
+us -> user: 403 Forbidden
+end
+
+==In/Out Time Logging==
+
+user -> ios: POST /inout/entry {studentId, timestamp} (JWT)
+ios -> us: Validate JWT Token
+alt if token valid
+us -> ios: 200 OK
+ios -> db: Insert In Time for Student
+note right of ios: <b>Note:</b>\n• Entry must be before 10 PM\n• Data resets every semester
+ios -> user: Entry Time Logged
+else
+us -> user: 403 Forbidden
+end
+
+==Report Damage==
+
+user -> ds: POST /damage/report {item, description} (JWT)
+ds -> us: Validate JWT Token
+alt if token valid
+us -> ds: 200 OK
+ds -> db: Save Damage Report in DB
+note over ds,db: <b>Sample items:\n• Electrical: Tube, Fan\n• Furniture: Table, Chair
+group Async Notification
+ds -> ns: Send Email/SMS about damage to Admin
+ds -> lq: Publish DamageReported event
+lq -> ls: Consume DamageReported event
+ls -> db: Store in Listener Logs
+ns -> user: Confirmation message sent via Email/SMS
+end
+ds -> user: Damage Report Submitted
+else
+us -> user: 403 Forbidden
+end
+
+==Room Allocation==
+
+user -> rs: POST /room/allocate {studentId, gender, roomType} (JWT)
+rs -> us: Validate JWT Token
+alt if token valid
+us -> rs: 200 OK
+rs -> db: Allocate Room based on gender, type & availability
+note over rs,db: <b>Room Allocation:</b>\n• Hostel selected based on gender\n• If preferred room unavailable, assign nearest vacant room\n• Status updated to "Allocated"
+group Notification
+rs -> ns: Send Room Allocation Notification to Student
+rs -> lq: Publish RoomAllocated event
+lq -> ls: Consume RoomAllocated event
+ls -> db: Store in Listener Logs
+ns -> user: Email/SMS with Room Number & Hostel Block
+end
+rs -> user: Room Allocation Confirmation
+else
+us -> user: 403 Forbidden
+end
+
+==Room Status Check==
+
+user -> rs: GET /room/status (JWT)
+rs -> us: Validate JWT
+us -> rs: 200 OK
+rs -> db: Retrieve Room Allocation Info and Available Rooms
+note over rs,db: <b>Note:</b> Each room can have up to 4 students.
+rs -> user: Return Room Info\n• Assigned Room (if any)\n• Available Rooms List
+
+==Room Change Request==
+
+user -> rs: POST /room/change {studentId, newRoomType} (JWT)
+rs -> us: Validate JWT
+alt if token valid
+us -> rs: 200 OK
+rs -> db: Update Room Assignment
+group Notify Student
+rs -> ns: Notify student of new room
+rs -> lq: Publish RoomChanged event
+lq -> ls: Consume RoomChanged event
+ls -> db: Store in Listener Logs
+ns -> user: Room Changed Notification Sent
+end
+rs -> user: Room Changed Successfully
+else
+us -> user: 403 Forbidden
+end
+
+==Room Vacate==
+
+user -> rs: POST /room/vacate {studentId} (JWT)
+rs -> us: Validate JWT
+alt if token valid
+us -> rs: 200 OK
+rs -> db: Update Room Status to "Vacant"
+group Notify Student
+rs -> ns: Notify student of room vacated
+rs -> lq: Publish RoomVacated event
+lq -> ls: Consume RoomVacated event
+ls -> db: Store in Listener Logs
+ns -> user: Room Vacated Confirmation Sent
+end
+rs -> user: Room Vacated Successfully
+else
+us -> user: 403 Forbidden
+end
+
+==Staff-triggered Daily Summary==
+
+ss -> db: Fetch Daily Summary [InOut, Damages, Occupancy]
+ss -> ns: Send Report to Hostel Admin
+ns -> user: Daily Report Sent (Async)
+
+@enduml
