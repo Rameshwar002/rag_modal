@@ -162,3 +162,51 @@ def render_bdd_generator_ui():
             "generated.feature",
             "text/plain"
         )
+
+
+
+
+
+def _enhance_with_llm(bdd_text, model):
+    if not LLM_AVAILABLE:
+        return bdd_text
+
+    prompt = f"""
+You are an API BDD expert.
+
+Your task:
+Improve the following Gherkin feature file while keeping it VALID.
+
+Rules:
+1. Do NOT change Feature, Scenario count, or tags structure
+2. Improve Given/When/Then wording only
+3. Assume scenarios are API-based unless stated otherwise
+4. Enhance assertions using:
+   - HTTP status codes
+   - JSON response paths (e.g. $.status, $.data.id)
+5. Normalize result values into one of:
+   - OK
+   - WARNING
+   - ERROR
+6. If response validation is vague, rewrite Then steps as:
+   - response status code should be <code>
+   - response body <json_path> should be <value>
+7. If tags are missing, intelligently add:
+   - @api
+8. Keep all Gherkin keywords intact
+
+JSON semantics to prefer:
+- status → $.status
+- message → $.message
+- error → $.error.code
+- data → $.data.*
+
+Gherkin:
+{bdd_text}
+"""
+
+    response = ollama.chat(
+        model=model,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response["message"]["content"]
