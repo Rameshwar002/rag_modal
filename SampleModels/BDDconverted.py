@@ -2,27 +2,32 @@ import streamlit as st
 import pandas as pd
 import re
 
-st.set_page_config(page_title="Advanced BDD Generator", layout="centered")
-st.title("🧪 Advanced BDD Generator")
-st.caption("Background + Scenario Outline supported")
+# Optional LLM (Ollama)
+try:
+    import ollama
+    LLM_AVAILABLE = True
+except ImportError:
+    LLM_AVAILABLE = False
 
-uploaded_file = st.file_uploader("Upload Test Case Excel", type=["xlsx"])
 
+# =====================================================
+# INTERNAL LOGIC (RULE BASED)
+# =====================================================
 
-def parse_steps(text):
+def _parse_steps(text):
     if pd.isna(text):
         return []
     lines = text.replace("\r", "").split("\n")
     return [l.strip().lstrip("0123456789. ") for l in lines if l.strip()]
 
 
-def find_placeholders(text):
+def _find_placeholders(text):
     if pd.isna(text):
         return []
     return re.findall(r"<(.+?)>", text)
 
 
-def generate_bdd(df):
+def _generate_bdd_rule_based(df):
     bdd = ""
 
     for feature, fdf in df.groupby("test_case_mapping"):
@@ -47,21 +52,19 @@ def generate_bdd(df):
             sample = sdf.iloc[0]
 
             placeholders = set(
-                find_placeholders(sample["procedure"]) +
-                find_placeholders(sample["expected_output"])
+                _find_placeholders(sample["procedure"]) +
+                _find_placeholders(sample["expected_output"])
             )
 
             is_outline = len(placeholders) > 0 and len(sdf) > 1
+            scenario_type = "Scenario Outline" if is_outline else "Scenario"
 
-            if is_outline:
-                bdd += f"  Scenario Outline: {desc}\n"
-            else:
-                bdd += f"  Scenario: {desc}\n"
+            bdd += f"  {scenario_type}: {desc}\n"
 
             if not background_used and pd.notna(sample["pre_requisite"]):
                 bdd += f"    Given {sample['pre_requisite']}\n"
 
-            steps = parse_steps(sample["procedure"])
+            steps = _parse_steps(sample["procedure"])
             if steps:
                 bdd += f"    When {steps[0]}\n"
                 for step in steps[1:]:
@@ -75,36 +78,84 @@ def generate_bdd(df):
                 bdd += "\n    Examples:\n"
                 headers = list(placeholders)
                 bdd += "      | " + " | ".join(headers) + " |\n"
-
-                for _ in sdf.itertuples():
-                    values = ["TBD" for _ in headers]  # can be extended
-                    bdd += "      | " + " | ".join(values) + " |\n"
+                for _ in range(len(sdf)):
+                    bdd += "      | " + " | ".join(["TBD"] * len(headers)) + " |\n"
 
             bdd += "\n"
 
     return bdd
 
 
-if uploaded_file:
-    df = pd.read_excel(uploaded_file)
+def _enhance_with_llm(bdd_text, model):
+    if not LLM_AVAILABLE:
+        return bdd_text
 
-    required_cols = {
-        "test_case_mapping",
-        "Description",
-        "pre_requisite",
-        "procedure",
-        "expected_output",
-        "region"
-    }
+    prompt = f"""
+You are a BDD expert.
+Improve wording only.
+Do NOT change structure, tags, or keywords.
 
-    if not required_cols.issubset(df.columns):
-        st.error("Missing required columns")
-    else:
-        bdd_text = generate_bdd(df)
+{bdd_text}
+"""
+    response = ollama.chat(
+        model=model,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response["message"]["content"]
 
-        st.subheader("📄 Generated BDD Feature")
-        st.code(bdd_text, language="gherkin")
 
+# =====================================================
+# 🔥 ONE MAIN UI FUNCTION (CALL THIS)
+# =====================================================
+
+def render_bdd_generator_ui():
+    st.header("🧪 BDD Feature Generator")
+    st.caption("Excel → Rule-based / LLM-enhanced BDD")
+
+    uploaded_file = st.file_uploader(
+        "📂 Upload Test Case Excel",
+        type=["xlsx"],
+        key="bdd_excel"
+    )
+
+    use_llm = st.checkbox("✨ Enhance using LLM", disabled=not LLM_AVAILABLE)
+    llm_model = "llama3"
+
+    if uploaded_file:
+        df = pd.read_excel(uploaded_file)
+
+        required_cols = {
+            "test_case_mapping",
+            "Description",
+            "pre_requisite",
+            "procedure",
+            "expected_output",
+            "region"
+        }
+
+        if not required_cols.issubset(df.columns):
+            st.error("❌ Excel columns do not match expected test case format")
+            return
+
+        st.success("✅ Excel validated")
+
+        # ---------- PROMPT BUTTON ----------
+        if st.button("🚀 Generate BDD Feature File"):
+            with st.spinner("Generating BDD..."):
+                bdd_text = _generate_bdd_rule_based(df)
+
+                if use_llm:
+                    bdd_text = _enhance_with_llm(bdd_text, llm_model)
+
+            st.subheader("📄 Generated BDD Preview")
+            st.code(bdd_text, language="gherkin")
+
+            st.download_button(
+                "⬇️ Download .feature file",
+                bdd_text,
+                file_name="generated.feature",
+                mime="text/plain"
+            )
         st.download_button(
             "⬇️ Download .feature file",
             bdd_text,
