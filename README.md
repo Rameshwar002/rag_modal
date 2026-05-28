@@ -1,31 +1,48 @@
+# RAG Project
 
-# 📘 RAG with ChromaDB (No GPU)
+Production-ready Retrieval-Augmented Generation pipeline.
 
-This project demonstrates a **lightweight Retrieval-Augmented Generation (RAG) pipeline** using:
+## Architecture
 
-* [Sentence Transformers](https://www.sbert.net/) for embeddings
-* [ChromaDB](https://www.trychroma.com/) as a vector database
-
-👉 Works on **CPU only** (no GPU required).
-
----
-
-## 🚀 1. Installation
-
-```bash
-# Create virtual environment (recommended)
-python -m venv rag_env
-source rag_env/bin/activate  # On Windows: rag_env\Scripts\activate
-
-# Upgrade pip
-pip install --upgrade pip
-
-# Install dependencies
-pip install -r requirements.txt          
+```
+rag_project/
+├── src/
+│   ├── ingestion/      Load from PDFs, CSVs, Confluence, SharePoint, URLs
+│   ├── chunking/       Split text into overlapping chunks
+│   ├── embeddings/     Generate embeddings via Anthropic / OpenAI
+│   ├── vectordb/       ChromaDB persistent vector store
+│   ├── retrieval/      Similarity search + reranking
+│   ├── prompts/        Prompt templates
+│   ├── llm/            Claude API client
+│   ├── api/            FastAPI routes
+│   └── utils/          Logging, helpers
+├── tests/
+├── logs/
+├── .env
+├── config.yaml
+├── requirements.txt
+└── main.py
 ```
 
-⚠️ If you see warnings like
-`WARNING: The script ... is not on PATH`,
-you can ignore them or add the path to your system `PATH`.
+## Quickstart
 
----
+```bash
+pip install -r requirements.txt
+cp .env.example .env          # add your API keys
+uvicorn main:app --reload
+```
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/ingest/file` | Upload & embed a file |
+| POST | `/ingest/confluence` | Sync Confluence space |
+| POST | `/ingest/sharepoint` | Sync SharePoint site |
+| POST | `/chat` | RAG chat query |
+| GET  | `/collections` | List ChromaDB collections |
+| DELETE | `/collections/{name}` | Clear a collection |
+
+## Tip
+
+Keep `.env` out of git. Never hardcode API keys.

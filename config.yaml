@@ -1,0 +1,62 @@
+# ── RAG Configuration ──────────────────────────────────────────────────────────
+
+llm:
+  provider: ollama
+  model: llama3.2
+  base_url: http://localhost:11434
+  max_tokens: 1024
+  temperature: 0.2
+
+embeddings:
+  provider: ollama
+  model: nomic-embed-text
+  base_url: http://localhost:11434
+  batch_size: 16
+
+chunking:
+  strategy: recursive
+  chunk_size: 512
+  chunk_overlap: 64
+  separators: ["\n\n", "\n", ". ", " ", ""]
+
+vectordb:
+  persist_directory: ./chroma_store
+
+retrieval:
+  top_k: 6
+  score_threshold: 0.20
+
+preprocessing:
+  mask_pii: true
+  remove_html: true
+  normalize_whitespace: true
+  min_length: 20
+
+reranking:
+  enabled: true
+  mode: bm25          # bm25 | llm | cohere
+
+hallucination:
+  enabled: true
+  mode: overlap       # overlap (no LLM needed) | llm
+
+evaluation:
+  enabled: true
+
+cache:
+  enabled: true
+  max_size: 500
+  ttl_seconds: 3600
+  semantic_threshold: 0.95
+
+safety:
+  content_filter: true
+  bias_check: true
+  pii_masking: true
+
+feedback:
+  file: logs/feedback.jsonl
+
+logging:
+  level: INFO
+  file: logs/app.log

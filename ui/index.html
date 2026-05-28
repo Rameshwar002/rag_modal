@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RAG Assistant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:      #000000;
+    --bg1:     #080808;
+    --bg2:     #0f0f0f;
+    --bg3:     #141414;
+    --border:  #1a1a1a;
+    --border2: #222222;
+    --text:    #cccccc;
+    --text2:   #888888;
+    --text3:   #444444;
+    --green:   #3d8c3d;
+    --green-t: #6db96d;
+    --red:     #6b2b2b;
+    --blue:    #1a3a6a;
+    --blue-t:  #4d8abf;
+    --teal:    #0e3030;
+    --teal-t:  #3a9090;
+    --amber:   #806030;
+    --amber-t: #c09050;
+    --mono:    'JetBrains Mono', monospace;
+    --sans:    'Inter', sans-serif;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+
+  /* Layout */
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* Header */
+  header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 20px; border-bottom: 1px solid var(--border);
+    background: var(--bg); position: sticky; top: 0; z-index: 10; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; margin-right: auto; }
+  .brand-mark { color: #555; font-size: 18px; }
+  .brand-name { font-family: var(--mono); font-weight: 500; font-size: 15px; color: #ddd; letter-spacing: .05em; }
+  .brand-sub  { font-size: 11px; color: #333; }
+
+  /* LLM pill */
+  .llm-pill {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--bg1); border: 1px solid var(--border); border-radius: 7px; padding: 5px 12px;
+    transition: border-color .3s;
+  }
+  .llm-pill.on  { border-color: #1f3d1f; }
+  .llm-pill.off { border-color: #2a1a1a; }
+  .llm-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; transition: all .4s; }
+  .llm-dot.on  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .llm-dot.off { background: var(--red); }
+  .llm-txt { font-family: var(--mono); font-size: 12px; font-weight: 500; }
+  .llm-txt.on  { color: var(--green-t); }
+  .llm-txt.off { color: #a05050; }
+
+  .meta-pill {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--bg1); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px;
+    font-size: 11px; color: var(--text3);
+  }
+  .meta-pill span { font-family: var(--mono); font-size: 13px; color: #aaa; }
+
+  /* Nav */
+  nav { display: flex; gap: 2px; }
+  .nav-btn {
+    background: transparent; border: 1px solid transparent; color: var(--text2);
+    padding: 6px 13px; border-radius: 6px; font-size: 13px; font-family: var(--sans);
+    cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all .1s;
+  }
+  .nav-btn.active { background: var(--bg1); color: #bbb; border-color: var(--border); }
+  .nav-btn .badge {
+    background: var(--bg3); color: var(--text2); border-radius: 10px;
+    font-size: 10px; padding: 1px 6px; font-family: var(--mono);
+  }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: flex; flex-direction: column; }
+
+  /* ── CHAT ── */
+  #chat-panel { flex: 1; overflow: hidden; }
+  #messages {
+    flex: 1; overflow-y: auto; padding: 24px 20px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .msg-row { display: flex; gap: 10px; align-items: flex-start; }
+  .msg-row.user { flex-direction: row-reverse; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: var(--bg1); border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: #444; flex-shrink: 0; font-family: var(--mono);
+  }
+  .bubble {
+    max-width: 74%; padding: 11px 14px; border-radius: 10px;
+    font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+  }
+  .bubble.bot  { background: var(--bg1); border: 1px solid var(--border); color: #bbb; border-top-left-radius: 2px; }
+  .bubble.user { background: var(--bg2); border: 1px solid var(--border2); color: #ddd; border-top-right-radius: 2px; }
+
+  .llm-badge-row { display: flex; align-items: center; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+  .llm-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid;
+    font-family: var(--mono);
+  }
+  .llm-badge.yes { background: #0d1a0d; color: var(--green-t); border-color: #1a2e1a; }
+  .llm-badge.no  { background: #1a1200; color: var(--amber-t); border-color: #2a2000; }
+  .chunks-badge { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+
+  .src-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .src-lbl { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+  .src-chip { font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid; font-family: var(--mono); }
+  .src-chip.confluence { border-color: #1a3a6a; color: var(--blue-t); }
+  .src-chip.sharepoint { border-color: #0e3030; color: var(--teal-t); }
+  .src-chip.file       { border-color: #2a2a2a; color: #888; }
+
+  details summary { cursor: pointer; font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 5px; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  .ctx-card { margin-top: 5px; background: #040404; border: 1px solid #0d0d0d; border-radius: 5px; padding: 8px 10px; }
+  .ctx-meta { display: flex; justify-content: space-between; }
+  .score-tag { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+
+  /* Thinking dots */
+  .thinking { display: flex; align-items: center; gap: 4px; padding: 13px 15px; background: var(--bg1); border: 1px solid var(--border); border-radius: 10px; border-top-left-radius: 2px; }
+  .dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #333; animation: bdot 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: .2s; }
+  .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes bdot { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
+
+  /* Input bar */
+  .input-bar { border-top: 1px solid var(--border); background: var(--bg); padding: 12px 20px; }
+  .no-llm-banner {
+    display: flex; align-items: center; gap: 7px;
+    color: var(--amber); font-size: 12px; margin-bottom: 8px;
+    padding: 8px 12px; background: #100e00; border: 1px solid #201800; border-radius: 6px;
+  }
+  .input-row { display: flex; gap: 8px; }
+  #chat-input {
+    flex: 1; background: var(--bg1); border: 1px solid var(--border2); border-radius: 8px;
+    padding: 11px 14px; color: #ccc; font-size: 14px; font-family: var(--sans); transition: border .15s; resize: none; height: 44px;
+  }
+  #chat-input:focus { outline: none; border-color: #333; }
+  .send-btn {
+    width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--border2);
+    background: var(--bg2); color: #666; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all .1s;
+  }
+  .send-btn:hover { color: #aaa; }
+  .send-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── SOURCES & UPLOAD panels ── */
+  .scroll-panel { flex: 1; overflow-y: auto; }
+  .inner { max-width: 680px; margin: 0 auto; padding: 28px 20px; }
+  .panel-title { font-size: 17px; font-weight: 500; color: #ddd; margin-bottom: 5px; font-family: var(--mono); }
+  .panel-desc  { font-size: 13px; color: var(--text2); margin-bottom: 22px; line-height: 1.6; }
+  code { font-family: var(--mono); font-size: 12px; color: #666; }
+
+  /* DB card */
+  .db-card { background: var(--bg1); border: 1px solid var(--border); border-radius: 7px; padding: 16px 18px; margin-bottom: 16px; }
+  .db-title { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 12px; text-transform: uppercase; letter-spacing: .07em; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-family: var(--mono); font-size: 10px; color: var(--text3); text-align: left; padding: 8px 12px; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); background: #030303; }
+  td { padding: 9px 12px; font-size: 13px; color: #777; border-bottom: 1px solid #0a0a0a; background: var(--bg1); vertical-align: middle; transition: background .1s; }
+  tr:hover td { background: #0a0a0a; }
+  .mono-cell { font-family: var(--mono); font-size: 12px; }
+  .status-pill { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-family: var(--mono); }
+  .status-pill.active { background: #0d1a0d; color: var(--green-t); border: 1px solid #1a2e1a; }
+  .status-pill.empty  { background: #111; color: #444; border: 1px solid var(--border); }
+
+  /* Source card */
+  .src-card { background: var(--bg1); border: 1px solid var(--border); border-radius: 7px; margin-bottom: 12px; overflow: hidden; transition: border-color .2s; }
+  .src-card.connected-cf { border-color: #1a3a6a55; }
+  .src-card.connected-sp { border-color: #0e303055; }
+  .src-head { display: flex; align-items: center; gap: 14px; padding: 16px 18px; }
+  .src-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .src-name { font-size: 14px; font-weight: 500; color: #ccc; }
+  .src-desc { font-size: 12px; color: var(--text2); margin-top: 2px; font-family: var(--mono); }
+  .src-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .on-dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 6px currentColor; flex-shrink: 0; }
+
+  /* Auth form */
+  .auth-form { border-top: 1px solid #0d0d0d; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .form-row { display: flex; flex-direction: column; gap: 5px; }
+  label.lbl { font-size: 11px; color: var(--text2); font-family: var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+  .inp {
+    background: #0a0a0a; border: 1px solid var(--border2); border-radius: 6px;
+    padding: 9px 12px; color: #ccc; font-size: 13px; width: 100%;
+    font-family: var(--sans); transition: border .15s;
+  }
+  .inp:focus { outline: none; border-color: #333; }
+  .pw-wrap { display: flex; align-items: center; gap: 6px; }
+  .pw-wrap .inp { flex: 1; }
+  .eye-btn { background: transparent; border: none; color: var(--text3); padding: 8px; cursor: pointer; display: flex; align-items: center; }
+  .hint { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .hint a { color: #555; text-decoration: underline; text-underline-offset: 2px; }
+  .err-box {
+    display: flex; align-items: center; gap: 6px; color: #a05050;
+    background: #1a0a0a; border: 1px solid #2a1010; border-radius: 5px;
+    padding: 8px 10px; font-size: 12px;
+  }
+  .btn-connect {
+    align-self: flex-start; padding: 8px 18px; border-radius: 6px; border: 1px solid;
+    background: transparent; font-size: 12px; font-family: var(--mono);
+    cursor: pointer; display: flex; align-items: center; gap: 7px; transition: opacity .15s;
+  }
+  .btn-connect:hover { opacity: .75; }
+  .btn-connect:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-disconnect {
+    padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border2);
+    background: transparent; color: var(--text2); font-size: 11px;
+    cursor: pointer; font-family: var(--mono); transition: opacity .15s;
+  }
+  .btn-disconnect:hover { opacity: .75; }
+  .note-box { margin-top: 12px; font-size: 12px; color: var(--text3); line-height: 1.6; padding: 11px 14px; background: var(--bg1); border: 1px solid var(--border); border-radius: 6px; }
+
+  /* Upload */
+  .dropzone {
+    border: 1px dashed var(--border2); border-radius: 7px; padding: 40px 22px;
+    text-align: center; cursor: pointer; background: var(--bg1); margin-bottom: 16px; transition: all .15s;
+  }
+  .dropzone:hover, .dropzone.drag-over { border-color: #333; background: #0a0a0a; }
+  .drop-icon { font-size: 28px; margin-bottom: 10px; color: #333; }
+  .drop-main { font-size: 14px; color: #777; margin-bottom: 4px; }
+  .drop-link { color: #999; text-decoration: underline; text-underline-offset: 2px; }
+  .drop-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+  .stats-bar { display: flex; background: var(--bg1); border: 1px solid var(--border); border-radius: 7px; padding: 14px 18px; margin-bottom: 14px; }
+  .stat { flex: 1; text-align: center; }
+  .stat-val { display: block; font-family: var(--mono); font-size: 20px; font-weight: 500; color: #ddd; }
+  .stat-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; }
+  .stat-div { width: 1px; background: var(--border); margin: 4px 0; }
+
+  .tbl-wrap { background: var(--bg1); border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .indexed-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--green-t); background: #0a160a; border: 1px solid #162416; padding: 2px 8px; border-radius: 4px; font-family: var(--mono); }
+  .err-badge { font-size: 10px; color: #a05050; background: #160a0a; border: 1px solid #2a1010; padding: 2px 8px; border-radius: 4px; font-family: var(--mono); }
+  .del-btn { background: transparent; border: none; color: #333; cursor: pointer; padding: 6px; border-radius: 4px; transition: color .1s; }
+  .del-btn:hover { color: #a05050; }
+  .file-name-cell { display: flex; align-items: center; gap: 7px; max-width: 220px; overflow: hidden; }
+  .file-name-txt { color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .empty-state { padding: 44px 22px; text-align: center; }
+  .empty-state p { font-size: 13px; color: #333; margin-top: 8px; }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; width: 11px; height: 11px; border: 1.5px solid rgba(255,255,255,.15); border-top-color: currentColor; border-radius: 50%; animation: spin .7s linear infinite; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ HEADER ══ -->
+  <header>
+    <div class="brand">
+      <span class="brand-mark">◈</span>
+      <span class="brand-name">RAG</span>
+      <span class="brand-sub">/ assistant</span>
+    </div>
+
+    <div class="llm-pill off" id="llm-pill" title="">
+      <span class="llm-dot off" id="llm-dot"></span>
+      <span style="color:#444;font-size:13px">⬡</span>
+      <span class="llm-txt off" id="llm-txt">LLM offline</span>
+    </div>
+
+    <div class="meta-pill">
+      <span id="total-chunks">0</span>&nbsp;chunks
+    </div>
+
+    <nav>
+      <button class="nav-btn active" onclick="switchTab('chat',this)">💬 Chat</button>
+      <button class="nav-btn" onclick="switchTab('sources',this)">🔗 Sources</button>
+      <button class="nav-btn" onclick="switchTab('upload',this)">
+        📁 Upload <span class="badge" id="file-badge" style="display:none">0</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ══ CHAT ══ -->
+  <div class="panel active" id="chat-panel" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+    <div id="messages" style="flex:1;overflow-y:auto;padding:24px 20px;display:flex;flex-direction:column;gap:20px;">
+      <div class="msg-row">
+        <div class="avatar">◈</div>
+        <div class="bubble bot">Hello! Connect your knowledge sources or upload files, then ask me anything.
+
+Without an LLM I'll return the raw matching chunks. With Ollama or Claude configured I'll give you a proper answer.</div>
+      </div>
+    </div>
+    <div class="input-bar">
+      <div class="no-llm-banner" id="no-llm-banner" style="display:none;">
+        ⚠ LLM offline — will return raw chunks. Start Ollama or set config.yaml.
+      </div>
+      <div class="input-row">
+        <textarea id="chat-input" placeholder="Ask about your documents…" rows="1"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SOURCES ══ -->
+  <div class="panel scroll-panel" id="sources-panel">
+    <div class="inner">
+      <h2 class="panel-title">Knowledge Sources</h2>
+      <p class="panel-desc">Connect external platforms. Each syncs into a dedicated ChromaDB collection.</p>
+
+      <!-- DB stats table -->
+      <div class="db-card">
+        <div class="db-title">◈ ChromaDB Collections</div>
+        <table>
+          <thead><tr><th>Collection</th><th>Chunks</th><th>Status</th></tr></thead>
+          <tbody id="col-table-body">
+            <tr><td class="mono-cell">confluence_docs</td><td class="mono-cell" id="col-cf">0</td><td><span class="status-pill empty" id="col-cf-status">empty</span></td></tr>
+            <tr><td class="mono-cell">sharepoint_docs</td><td class="mono-cell" id="col-sp">0</td><td><span class="status-pill empty" id="col-sp-status">empty</span></td></tr>
+            <tr><td class="mono-cell">uploaded_files</td><td class="mono-cell" id="col-files">0</td><td><span class="status-pill empty" id="col-files-status">empty</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Confluence -->
+      <div class="src-card" id="cf-card">
+        <div class="src-head">
+          <div class="src-icon" style="background:#0d1e3a;">
+            <svg viewBox="0 0 24 24" fill="#4d8abf" width="20" height="20"><path d="M2.1 16.7c-.3.5-.1 1.1.4 1.4l5.5 3.2c.5.3 1.1.1 1.4-.4l1.1-1.9c-2.5-1.2-5-2.9-6.7-4.9L2.1 16.7zm19.8-9.4c.3-.5.1-1.1-.4-1.4L16 2.7c-.5-.3-1.1-.1-1.4.4L13.5 5c2.5 1.2 5 2.9 6.7 4.9l1.7-2.6zM12 4.3C7.7 4.3 4.1 7.5 3.4 11.7h3.2c.6-2.6 2.9-4.5 5.4-4.5s4.8 1.9 5.4 4.5h3.2C19.9 7.5 16.3 4.3 12 4.3zm0 15.4c4.3 0 7.9-3.2 8.6-7.4h-3.2c-.6 2.6-2.9 4.5-5.4 4.5s-4.8-1.9-5.4-4.5H3.4c.7 4.2 4.3 7.4 8.6 7.4z"/></svg>
+          </div>
+          <div style="flex:1">
+            <div class="src-name">Confluence</div>
+            <div class="src-desc" id="cf-desc">Sync pages and spaces from Confluence Cloud</div>
+          </div>
+          <div class="src-actions" id="cf-actions" style="display:none;">
+            <span class="on-dot" style="color:var(--blue-t);background:var(--blue-t);"></span>
+            <button class="btn-disconnect" onclick="disconnectSource('confluence')">Disconnect</button>
+          </div>
+        </div>
+        <div class="auth-form" id="cf-form">
+          <div class="form-row">
+            <label class="lbl">Confluence URL</label>
+            <input class="inp" id="cf-url" placeholder="https://your-org.atlassian.net"/>
+          </div>
+          <div class="form-row">
+            <label class="lbl">Username (email)</label>
+            <input class="inp" id="cf-user" placeholder="you@example.com"/>
+          </div>
+          <div class="form-row">
+            <label class="lbl">API Token</label>
+            <div class="pw-wrap">
+              <input class="inp" id="cf-token" type="password" placeholder="Your Atlassian API token"/>
+              <button class="eye-btn" onclick="togglePw('cf-token',this)">👁</button>
+            </div>
+            <span class="hint">Get token: <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">Atlassian API Tokens →</a></span>
+          </div>
+          <div class="form-row">
+            <label class="lbl">Space Key</label>
+            <input class="inp" id="cf-space" placeholder="ENG"/>
+          </div>
+          <div class="err-box" id="cf-err" style="display:none;"></div>
+          <button class="btn-connect" id="cf-btn" style="border-color:#1a3a6a;color:var(--blue-t);"
+            onclick="connectConfluence()">Connect Confluence</button>
+        </div>
+      </div>
+
+      <!-- SharePoint -->
+      <div class="src-card" id="sp-card">
+        <div class="src-head">
+          <div class="src-icon" style="background:#0a2020;">
+            <svg viewBox="0 0 32 32" fill="#3a9090" width="20" height="20"><path d="M16 2C8.3 2 2 8.3 2 16s6.3 14 14 14 14-6.3 14-14S23.7 2 16 2zm0 4c5.5 0 10 4.5 10 10s-4.5 10-10 10S6 21.5 6 16 10.5 6 16 6zm-4 4v12h3v-5h2v5h3V10h-3v5h-2v-5z"/></svg>
+          </div>
+          <div style="flex:1">
+            <div class="src-name">SharePoint</div>
+            <div class="src-desc" id="sp-desc">Sync documents and sites from SharePoint Online</div>
+          </div>
+          <div class="src-actions" id="sp-actions" style="display:none;">
+            <span class="on-dot" style="color:var(--teal-t);background:var(--teal-t);"></span>
+            <button class="btn-disconnect" onclick="disconnectSource('sharepoint')">Disconnect</button>
+          </div>
+        </div>
+        <div class="auth-form" id="sp-form">
+          <div class="form-row">
+            <label class="lbl">Site URL</label>
+            <input class="inp" id="sp-url" placeholder="https://your-org.sharepoint.com/sites/team"/>
+          </div>
+          <div class="form-row">
+            <label class="lbl">Client ID</label>
+            <input class="inp" id="sp-client-id" placeholder="Azure App Client ID"/>
+          </div>
+          <div class="form-row">
+            <label class="lbl">Client Secret</label>
+            <div class="pw-wrap">
+              <input class="inp" id="sp-secret" type="password" placeholder="Azure App Client Secret"/>
+              <button class="eye-btn" onclick="togglePw('sp-secret',this)">👁</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <label class="lbl">Folder Path</label>
+            <input class="inp" id="sp-folder" value="/Shared Documents"/>
+          </div>
+          <div class="err-box" id="sp-err" style="display:none;"></div>
+          <button class="btn-connect" id="sp-btn" style="border-color:#0e3030;color:var(--teal-t);"
+            onclick="connectSharePoint()">Connect SharePoint</button>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <strong style="color:#555">Credentials</strong> — sent only to your local Flask server (<code>localhost:5000</code>), never stored in the browser.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ UPLOAD ══ -->
+  <div class="panel scroll-panel" id="upload-panel">
+    <div class="inner">
+      <h2 class="panel-title">Upload Files</h2>
+      <p class="panel-desc">Files are chunked and indexed into the <code>uploaded_files</code> ChromaDB collection.</p>
+
+      <div class="dropzone" id="dropzone"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="handleDrop(event)">
+        <input type="file" id="file-input" multiple
+          accept=".txt,.md,.pdf,.docx,.csv,.json,.yaml,.html,.log"
+          style="display:none" onchange="uploadFiles(this.files)"/>
+        <div class="drop-icon">📂</div>
+        <div class="drop-main">Drop files or <span class="drop-link">browse</span></div>
+        <div class="drop-sub">.txt · .md · .pdf · .docx · .csv · .json · .yaml</div>
+        <div id="upload-status" style="margin-top:10px;font-size:12px;color:#555;display:none;">
+          <span class="spinner"></span> Uploading &amp; embedding…
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat"><span class="stat-val" id="stat-files">0</span><span class="stat-lbl">files</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><span class="stat-val" id="stat-chunks">0</span><span class="stat-lbl">chunks</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><span class="stat-val" id="stat-size">0 B</span><span class="stat-lbl">size</span></div>
+      </div>
+
+      <div id="files-table-wrap" style="display:none;" class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>File Name</th><th>Size</th><th>Chunks</th><th>Uploaded</th><th>Status</th><th></th>
+          </tr></thead>
+          <tbody id="files-tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="files-empty">
+        <div style="font-size:28px;color:#1e1e1e;">📄</div>
+        <p>No files uploaded yet</p>
+        <p style="font-size:11px;color:#222;font-family:var(--mono)">Drop files above to index them</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<script>
+const API = '';   // empty = same origin (Flask serves both)
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let uploadedFiles = [];
+let totalFileChunks = 0;
+let totalFileSize   = 0;
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById(name + '-panel');
+  panel.style.display = 'flex';
+  panel.classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Poll status ───────────────────────────────────────────────────────────────
+async function refreshStatus() {
+  try {
+    const [llm, col] = await Promise.all([
+      fetch(API + '/llm/status').then(r => r.json()),
+      fetch(API + '/collections').then(r => r.json()),
+    ]);
+    updateLLMPill(llm);
+    updateCollections(col);
+  } catch {
+    updateLLMPill({ connected: false, provider: 'none', model: '', message: 'API server not reachable' });
+  }
+}
+
+function updateLLMPill(llm) {
+  const pill = document.getElementById('llm-pill');
+  const dot  = document.getElementById('llm-dot');
+  const txt  = document.getElementById('llm-txt');
+  const banner = document.getElementById('no-llm-banner');
+
+  pill.className = 'llm-pill ' + (llm.connected ? 'on' : 'off');
+  dot.className  = 'llm-dot '  + (llm.connected ? 'on' : 'off');
+  txt.className  = 'llm-txt '  + (llm.connected ? 'on' : 'off');
+  txt.textContent = llm.connected ? llm.provider + ' / ' + llm.model : 'LLM offline';
+  pill.title = llm.message;
+  banner.style.display = llm.connected ? 'none' : 'flex';
+}
+
+function updateCollections(col) {
+  const cols = col.collections || {};
+  const total = col.total_chunks || 0;
+  document.getElementById('total-chunks').textContent = total;
+
+  const setPill = (id, statusId, count) => {
+    document.getElementById(id).textContent = count;
+    const el = document.getElementById(statusId);
+    el.textContent = count > 0 ? 'active' : 'empty';
+    el.className = 'status-pill ' + (count > 0 ? 'active' : 'empty');
+  };
+  setPill('col-cf',    'col-cf-status',    cols['confluence_docs'] || 0);
+  setPill('col-sp',    'col-sp-status',    cols['sharepoint_docs'] || 0);
+  setPill('col-files', 'col-files-status', cols['uploaded_files']  || 0);
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+  appendMessage('user', q, null);
+
+  const thinking = appendThinking();
+  document.getElementById('send-btn').disabled = true;
+
+  try {
+    const res  = await fetch(API + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q, top_k: 6 }),
+    });
+    const data = await res.json();
+    thinking.remove();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    appendMessage('assistant', data.answer, data);
+  } catch(e) {
+    thinking.remove();
+    appendMessage('assistant', 'Error: ' + e.message, null);
+  }
+  document.getElementById('send-btn').disabled = false;
+}
+
+function appendMessage(role, text, data) {
+  const msgs = document.getElementById('messages');
+  const row  = document.createElement('div');
+  row.className = 'msg-row' + (role === 'user' ? ' user' : '');
+
+  let inner = '';
+  if (role === 'assistant') inner += '<div class="avatar">◈</div>';
+
+  inner += '<div style="max-width:74%;min-width:0">';
+  inner += '<div class="bubble ' + role + '">' + escHtml(text) + '</div>';
+
+  if (data && data.llm_used !== undefined) {
+    inner += '<div class="llm-badge-row">';
+    inner += '<span class="llm-badge ' + (data.llm_used ? 'yes' : 'no') + '">' +
+      (data.llm_used ? '⬡ LLM answer' : '⚠ Raw chunks (no LLM)') + '</span>';
+    if (data.chunks_used > 0)
+      inner += '<span class="chunks-badge">' + data.chunks_used + ' chunks retrieved</span>';
+    inner += '</div>';
+  }
+
+  if (data && data.sources && data.sources.length) {
+    const srcSet = [...new Set(data.sources.map(s => s.source))];
+    inner += '<div class="src-row"><span class="src-lbl">via</span>';
+    srcSet.forEach(s => { inner += '<span class="src-chip ' + s + '">' + s + '</span>'; });
+    inner += '</div>';
+    inner += '<details><summary>Retrieved context (' + data.sources.length + ')</summary>';
+    data.sources.forEach(s => {
+      inner += '<div class="ctx-card"><div class="ctx-meta">';
+      inner += '<span style="font-family:var(--mono);font-size:10px;color:#666">' + escHtml(s.title || s.source) + '</span>';
+      inner += '<span class="score-tag">' + Math.round(s.score*100) + '%</span>';
+      inner += '</div></div>';
+    });
+    inner += '</details>';
+  }
+
+  inner += '</div>';
+  row.innerHTML = inner;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return row;
+}
+
+function appendThinking() {
+  const msgs = document.getElementById('messages');
+  const row  = document.createElement('div');
+  row.className = 'msg-row';
+  row.innerHTML = '<div class="avatar">◈</div><div class="thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return row;
+}
+
+// ── Confluence ─────────────────────────────────────────────────────────────────
+async function connectConfluence() {
+  const btn = document.getElementById('cf-btn');
+  const err = document.getElementById('cf-err');
+  err.style.display = 'none';
+  btn.innerHTML = '<span class="spinner"></span> Connecting…';
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch(API + '/ingest/confluence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url:       document.getElementById('cf-url').value,
+        username:  document.getElementById('cf-user').value,
+        api_token: document.getElementById('cf-token').value,
+        space_key: document.getElementById('cf-space').value,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    document.getElementById('cf-form').style.display = 'none';
+    document.getElementById('cf-actions').style.display = 'flex';
+    document.getElementById('cf-desc').textContent = 'Connected · ' + data.chunks + ' chunks indexed';
+    document.getElementById('cf-card').classList.add('connected-cf');
+    await refreshStatus();
+  } catch(e) {
+    err.textContent = '⚠ ' + e.message;
+    err.style.display = 'flex';
+    btn.innerHTML = 'Connect Confluence';
+    btn.disabled = false;
+  }
+}
+
+async function connectSharePoint() {
+  const btn = document.getElementById('sp-btn');
+  const err = document.getElementById('sp-err');
+  err.style.display = 'none';
+  btn.innerHTML = '<span class="spinner"></span> Connecting…';
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch(API + '/ingest/sharepoint', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        site_url:      document.getElementById('sp-url').value,
+        client_id:     document.getElementById('sp-client-id').value,
+        client_secret: document.getElementById('sp-secret').value,
+        folder_path:   document.getElementById('sp-folder').value,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    document.getElementById('sp-form').style.display = 'none';
+    document.getElementById('sp-actions').style.display = 'flex';
+    document.getElementById('sp-desc').textContent = 'Connected · ' + data.chunks + ' chunks indexed';
+    document.getElementById('sp-card').classList.add('connected-sp');
+    await refreshStatus();
+  } catch(e) {
+    err.textContent = '⚠ ' + e.message;
+    err.style.display = 'flex';
+    btn.innerHTML = 'Connect SharePoint';
+    btn.disabled = false;
+  }
+}
+
+async function disconnectSource(src) {
+  const colName = src === 'confluence' ? 'confluence_docs' : 'sharepoint_docs';
+  await fetch(API + '/collections/' + colName, { method: 'DELETE' });
+  if (src === 'confluence') {
+    document.getElementById('cf-form').style.display = 'flex';
+    document.getElementById('cf-actions').style.display = 'none';
+    document.getElementById('cf-desc').textContent = 'Sync pages and spaces from Confluence Cloud';
+    document.getElementById('cf-card').classList.remove('connected-cf');
+    document.getElementById('cf-btn').innerHTML = 'Connect Confluence';
+    document.getElementById('cf-btn').disabled = false;
+  } else {
+    document.getElementById('sp-form').style.display = 'flex';
+    document.getElementById('sp-actions').style.display = 'none';
+    document.getElementById('sp-desc').textContent = 'Sync documents and sites from SharePoint Online';
+    document.getElementById('sp-card').classList.remove('connected-sp');
+    document.getElementById('sp-btn').innerHTML = 'Connect SharePoint';
+    document.getElementById('sp-btn').disabled = false;
+  }
+  await refreshStatus();
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag-over');
+  uploadFiles(e.dataTransfer.files);
+}
+
+async function uploadFiles(files) {
+  if (!files.length) return;
+  document.getElementById('upload-status').style.display = 'block';
+
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res  = await fetch(API + '/ingest/file', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      addFileRow(file, data.chunks, 'indexed');
+      totalFileChunks += data.chunks;
+    } catch(e) {
+      addFileRow(file, 0, 'error: ' + e.message);
+    }
+    totalFileSize += file.size;
+  }
+
+  document.getElementById('upload-status').style.display = 'none';
+  updateFileStats();
+  await refreshStatus();
+}
+
+function addFileRow(file, chunks, status) {
+  uploadedFiles.push({ name: file.name, size: file.size, chunks, status, id: Date.now() + Math.random() });
+  const idx = uploadedFiles.length;
+  const tbody = document.getElementById('files-tbody');
+  const tr = document.createElement('tr');
+  tr.id = 'file-row-' + (uploadedFiles.length - 1);
+  tr.innerHTML = `
+    <td class="mono-cell" style="color:#333">${String(idx).padStart(2,'0')}</td>
+    <td><div class="file-name-cell"><span style="color:#444;font-size:13px">📄</span><span class="file-name-txt">${escHtml(file.name)}</span></div></td>
+    <td class="mono-cell" style="color:#666">${fmtBytes(file.size)}</td>
+    <td class="mono-cell">${chunks || '—'}</td>
+    <td style="font-size:11px;color:#444">${new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+    <td>${status === 'indexed'
+      ? '<span class="indexed-badge">✓ indexed</span>'
+      : '<span class="err-badge">' + escHtml(status) + '</span>'}</td>
+    <td><button class="del-btn" onclick="removeFile(${idx-1})">🗑</button></td>`;
+  tbody.appendChild(tr);
+  document.getElementById('files-table-wrap').style.display = 'block';
+  document.getElementById('files-empty').style.display = 'none';
+
+  // Update badge
+  const badge = document.getElementById('file-badge');
+  badge.style.display = 'inline';
+  badge.textContent = uploadedFiles.length;
+}
+
+async function removeFile(idx) {
+  await fetch(API + '/collections/uploaded_files', { method: 'DELETE' });
+  uploadedFiles.splice(idx, 1);
+  rebuildFileTable();
+  await refreshStatus();
+}
+
+function rebuildFileTable() {
+  const tbody = document.getElementById('files-tbody');
+  tbody.innerHTML = '';
+  totalFileChunks = 0; totalFileSize = 0;
+  uploadedFiles.forEach((f, i) => {
+    totalFileChunks += f.chunks || 0;
+    totalFileSize   += f.size   || 0;
+    addFileRowDirect(f, i);
+  });
+  updateFileStats();
+  if (!uploadedFiles.length) {
+    document.getElementById('files-table-wrap').style.display = 'none';
+    document.getElementById('files-empty').style.display = 'block';
+    document.getElementById('file-badge').style.display = 'none';
+  }
+}
+
+function addFileRowDirect(f, i) {
+  const tbody = document.getElementById('files-tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="mono-cell" style="color:#333">${String(i+1).padStart(2,'0')}</td>
+    <td><div class="file-name-cell"><span style="color:#444">📄</span><span class="file-name-txt">${escHtml(f.name)}</span></div></td>
+    <td class="mono-cell" style="color:#666">${fmtBytes(f.size)}</td>
+    <td class="mono-cell">${f.chunks||'—'}</td>
+    <td style="font-size:11px;color:#444">${f.uploadedAt||''}</td>
+    <td>${f.status==='indexed'?'<span class="indexed-badge">✓ indexed</span>':'<span class="err-badge">'+escHtml(f.status)+'</span>'}</td>
+    <td><button class="del-btn" onclick="removeFile(${i})">🗑</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function updateFileStats() {
+  document.getElementById('stat-files').textContent  = uploadedFiles.length;
+  document.getElementById('stat-chunks').textContent = totalFileChunks;
+  document.getElementById('stat-size').textContent   = fmtBytes(totalFileSize);
+  const badge = document.getElementById('file-badge');
+  badge.textContent = uploadedFiles.length;
+  badge.style.display = uploadedFiles.length ? 'inline' : 'none';
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+// Fix initial panel display
+document.querySelectorAll('.panel').forEach(p => { p.style.display = 'none'; });
+document.getElementById('chat-panel').style.display = 'flex';
+
+refreshStatus();
+setInterval(refreshStatus, 15000);   // re-check every 15s
+</script>
+</body>
+</html>

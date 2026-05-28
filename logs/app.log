@@ -1,0 +1,57 @@
+2026-05-28 14:54:51,294  ERROR     chromadb.telemetry.product.posthog  Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given
+2026-05-28 14:54:51,400  ERROR     chromadb.telemetry.product.posthog  Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2026-05-28 14:54:51,426  ERROR     chromadb.telemetry.product.posthog  Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2026-05-28 14:54:51,454  ERROR     chromadb.telemetry.product.posthog  Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+2026-05-28 14:54:51,456  INFO      src.vectordb.vector_store  vectordb_ready  persist_dir=chroma_store
+2026-05-28 14:54:51,456  INFO      __main__  llm_connected  provider=ollama  model=llama3.2
+2026-05-28 14:54:51,469  INFO      __main__  rag_ready  chunks=0  llm=ollama
+2026-05-28 14:54:51,469  INFO      __main__  →  http://localhost:5000
+2026-05-28 14:54:51,565  INFO      werkzeug  [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-05-28 14:54:51,565  INFO      werkzeug  [33mPress CTRL+C to quit[0m
+2026-05-28 14:55:02,364  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:02] "GET / HTTP/1.1" 200 -
+2026-05-28 14:55:02,482  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:02] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:55:06,530  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:06] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:55:09,574  INFO      src.embeddings.embedder  embedding_batch  provider=ollama  batch=1/1  size=1
+2026-05-28 14:55:16,746  INFO      src.embeddings.embedder  embedding_batch  provider=ollama  batch=1/1  size=1
+2026-05-28 14:55:17,775  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:17] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:55:21,826  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:21] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:55:24,882  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:24] "[35m[1mPOST /chat HTTP/1.1[0m" 503 -
+2026-05-28 14:55:31,953  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:31] "[35m[1mPOST /chat HTTP/1.1[0m" 503 -
+2026-05-28 14:55:32,793  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:32] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:55:34,770  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:34] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:55:36,832  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:36] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:55:41,217  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:41] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:55:47,779  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:47] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:55:49,026  INFO      src.ingestion.loader  file_loaded  path=C:\Users\HP\AppData\Local\Temp\tmpyzbl0pqn.docx  chars=892
+2026-05-28 14:55:49,892  INFO      src.chunking.chunker  chunking_done  title=Remote Vehicle Command Execution.docx  strategy=recursive  chunks=2
+2026-05-28 14:55:49,892  INFO      src.embeddings.embedder  embedding_batch  provider=ollama  batch=1/1  size=2
+2026-05-28 14:55:51,564  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:55:51] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:56:02,789  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:02] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:56:05,162  ERROR     src.api.routes  ingest_file_failed  error=RetryError[<Future at 0x24903617790 state=finished raised ConnectionError>]
+2026-05-28 14:56:05,165  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:05] "[35m[1mPOST /ingest/file HTTP/1.1[0m" 500 -
+2026-05-28 14:56:05,539  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:05] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:56:06,833  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:06] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:56:11,225  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:11] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:56:17,783  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:17] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:56:21,519  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:21] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:56:34,196  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:34] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:56:34,765  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:34] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:56:38,240  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:38] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:56:42,628  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:42] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:56:48,082  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:48] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:56:51,826  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:56:51] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:57:03,116  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:03] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:57:07,212  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:07] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:57:18,091  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:18] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:57:21,830  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:21] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:57:35,211  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:35] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:57:35,466  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:35] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:57:39,277  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:39] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:57:41,160  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:41] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:57:48,104  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:48] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:57:52,144  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:57:52] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:58:03,077  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:58:03] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:58:07,117  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:58:07] "GET /llm/status HTTP/1.1" 200 -
+2026-05-28 14:58:18,092  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:58:18] "GET /collections HTTP/1.1" 200 -
+2026-05-28 14:58:21,827  INFO      werkzeug  127.0.0.1 - - [28/May/2026 14:58:21] "GET /llm/status HTTP/1.1" 200 -
